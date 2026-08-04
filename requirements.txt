@@ -1,8 +1,11 @@
-# PyTorch with CUDA support
---extra-index-url https://download.pytorch.org/whl/cu118
-torch
-torchvision
-torchaudio
+# PyTorch with CUDA support. The cu128 index plus the version caps keep this on a CUDA 12 build:
+# torch 2.11+ on PyPI is built against CUDA 13, which needs an r580+ driver, and forward
+# compatibility is datacenter-GPU-only -- so a cu13 wheel installs fine but dies on the first GPU
+# op on a consumer card with a 5xx driver. cu128 also covers Blackwell (sm_120), which cu118 did not.
+--extra-index-url https://download.pytorch.org/whl/cu128
+torch<2.11
+torchvision<0.26
+torchaudio<2.11
 
 # ML & DL
 huggingface_hub
@@ -70,7 +73,11 @@ git+https://github.com/neelnanda-io/neel-plotly
 
 # Chapter 2 (RL)
 pygame
-gymnasium[atari, accept-rom-license, other, mujoco-py]==0.29.0
+# No `mujoco-py` extra: it is the legacy MuJoCo 2.1 binding, needs the mujoco210 binaries in
+# ~/.mujoco, and raises a bare Exception (not ImportError) when they are missing -- which
+# gymnasium's `try: import mujoco_py / except ImportError` does not catch, so it breaks *every*
+# MuJoCo env. The chapter only uses -v4 envs, which run on the modern `mujoco` bindings below.
+gymnasium[atari, accept-rom-license, other]==0.29.0
 mujoco
 # Rendering MuJoCo videos additionally needs a system OpenGL backend, which pip cannot provide:
 # `sudo apt-get install libosmesa6`, or without sudo `conda create -n oslibs -c conda-forge
@@ -79,8 +86,10 @@ mujoco
 # side (PyOpenGL, glfw) comes in as mujoco dependencies, and mp4 encoding uses imageio-ffmpeg.
 # GPU physics for the MuJoCo section (Brax `positional` backend + our torch PPO). Pinned because
 # brax only declares `jax>=0.4.6` (no upper bound), so an unpinned install grabs a newer jax whose
-# removed `device_put_replicated` breaks brax. jax 0.10.1 is the verified-working combo.
-jax[cuda12]==0.10.1
+# removed `device_put_replicated` breaks brax. The pin is also capped by numpy: jax >= 0.7.2 requires
+# numpy >= 2.0, but transformer_lens 2.x and CircuitsVis require numpy < 2 on Python < 3.13, so 0.7.1
+# is the newest jax that can share this environment (it resolves to numpy 1.26.4).
+jax[cuda12]==0.7.1
 brax==0.14.2
 # Vectorised Atari emulators (C++) for the Atari bonus section's AtariEnvs.
 envpool==1.2.5
